@@ -1,0 +1,163 @@
+     1                                  %include "lib.asm"
+     2                              <1> StrToInt:
+     3 00000000 57                  <1> push edi
+     4 00000001 B739                <1> mov bh,'9'
+     5 00000003 B330                <1> mov bl,'0'
+     6 00000005 56                  <1> push esi ; сохраняем адрес исходной строки
+     7 00000006 803E2D              <1> cmp byte[esi], '-'
+     8 00000009 7501                <1> jne .prod
+     9 0000000B 46                  <1> inc esi ; пропускаем знак минус
+    10 0000000C FC                  <1> .prod cld
+    11 0000000D 6631FF              <1> xor di,di ; обнуляем будущее число
+    12 00000010 AC                  <1> .cycle: lodsb ; загружаем символ (цифру)
+    13 00000011 3C0A                <1> cmp al,10 ; если 10, то на конец
+    14 00000013 741F                <1> je .Return
+    15 00000015 38D8                <1> cmp al,bl ; сравниваем с кодом нуля
+    16 00000017 722F                <1> jb .Error ; "ниже" – Ошибка
+    17 00000019 38F8                <1> cmp al,bh ; сравниваем с кодом девяти
+    18 0000001B 772B                <1> ja .Error ; "выше" – Ошибка
+    19 0000001D 2C30                <1> sub al,30h ; получаем цифру из символа
+    20 0000001F 6698                <1> cbw ; расширяем до слова
+    21 00000021 6650                <1> push ax ; сохраняем в стеке
+    22 00000023 66B80A00            <1> mov ax,10 ; заносим 10 в AX
+    23 00000027 66F7E7              <1> mul di ; умножаем, результат в DX:AX
+    24 0000002A 665F                <1> pop di ; в DI – очередная цифра
+    25 0000002C 6601F8              <1> add ax,di
+    26 0000002F 6689C7              <1> mov di,ax ; в DI – накопленное число
+    27 00000032 EBDC                <1> jmp .cycle
+    28 00000034 5E                  <1> .Return: pop esi
+    29 00000035 BB00000000          <1> mov ebx,0
+    30 0000003A 803E2D              <1> cmp byte[esi],'-'
+    31 0000003D 7503                <1> jne .J
+    32 0000003F 66F7DF              <1> neg di
+    33 00000042 6689F8              <1> .J mov ax,di
+    34 00000045 98                  <1> cwde
+    35 00000046 EB0B                <1> jmp .R
+    36 00000048 5E                  <1> .Error: pop esi
+    37 00000049 B800000000          <1> mov eax,0
+    38 0000004E BB01000000          <1> mov ebx,1
+    39 00000053 5F                  <1> .R pop EDI
+    40 00000054 C3                  <1> ret
+    41                              <1> 
+    42                              <1> 
+    43                              <1> 
+    44                              <1> IntToStr:
+    45 00000055 57                  <1> push edi
+    46 00000056 53                  <1> push ebx
+    47 00000057 52                  <1> push edx
+    48 00000058 51                  <1> push ecx
+    49 00000059 56                  <1> push esi
+    50 0000005A C60600              <1> mov byte[esi],0 ; на место знака
+    51 0000005D 83F800              <1> cmp eax,0
+    52 00000060 7D05                <1> jge .l1
+    53 00000062 F7D8                <1> neg eax
+    54 00000064 C6062D              <1> mov byte[esi],'-'
+    55 00000067 C646060A            <1> .l1 mov byte[esi+6],10
+    56 0000006B BF05000000          <1> mov edi,5
+    57 00000070 66BB0A00            <1> mov bx,10
+    58 00000074 6699                <1> .again: cwd ; расширили слово до двойного
+    59 00000076 66F7F3              <1> div bx ; делим результат на 10
+    60 00000079 80C230              <1> add dl,30h ; получаем из остатка код цифры
+    61 0000007C 88143E              <1> mov [esi+edi],DL ; пишем символ в строку
+    62 0000007F 4F                  <1> dec edi ; переводим указатель на
+    63                              <1> ; предыдущую позицию
+    64 00000080 6683F800            <1> cmp ax, 0 ; преобразовали все число?
+    65 00000084 75EE                <1> jne .again
+    66 00000086 B806000000          <1> mov eax, 6
+    67 0000008B 29F9                <1> sub ecx, edi ; длина результата+знак
+    68 0000008D 89C8                <1> mov eax,ecx
+    69 0000008F 40                  <1> inc eax ; длина результата+знак+0А
+    70 00000090 46                  <1> inc esi ; пропускаем знак
+    71 00000091 56                  <1> push esi
+    72 00000092 8D343E              <1> lea esi,[esi+edi] ; начало символов результата
+    73 00000095 5F                  <1> pop edi
+    74                              <1> ;rep movsb
+    75 00000096 5E                  <1> pop esi
+    76 00000097 59                  <1> pop ecx
+    77 00000098 5A                  <1> pop edx
+    78 00000099 5B                  <1> pop ebx
+    79 0000009A 5F                  <1> pop edi
+    80 0000009B C3                  <1> ret
+     2                                  
+     3                                  section .data ; сегмент инициализированных переменных
+     4                                  
+     5                                  section .bss ; сегмент неинициализированных переменных
+     6 00000000 ??????????????          outBuf resb 7
+     7                                  lenOut equ $-outBuf
+     8                                  
+     9 00000007 <res 15h>               inStr resb 21 ; память под вводимую строку
+    10                                  lenInStr equ $-inStr
+    11                                  
+    12 0000001C <res 15h>               outStr resb 21 ; длина результата 20 + байт под конец строки
+    13                                  lenOutStr equ $-outStr
+    14                                  
+    15                                  section .text ; сегмент кода
+    16                                  global _start
+    17                                  _start:
+    18                                  
+    19                                  input:
+    20 0000009C B803000000                  mov eax, 3 ; системная функция 3 (read)
+    21 000000A1 BB00000000                  mov ebx, 0 ; дескриптор файла stdin=0
+    22 000000A6 B9[07000000]                mov ecx, inStr ; адрес буфера ввода
+    23 000000AB BA15000000                  mov edx, lenInStr ; размер буфера
+    24 000000B0 CD80                        int 80h ; вызов системной функции
+    25                                  
+    26                                  get_real_len:
+    27 000000B2 B915000000                  mov ECX, 21 ; len of string
+    28 000000B7 8D3D[07000000]              lea EDI, [inStr] ; string to process
+    29 000000BD B00A                        mov AL, 10 
+    30 000000BF F2AE                        repne scasb ; search for '\n'
+    31 000000C1 83E915                      sub ECX, 21
+    32 000000C4 F7D9                        neg ECX ; real length of string 
+    33                                  process:
+    34 000000C6 8D2D[07000000]              lea EBP, [inStr] ; word with max len pos
+    35 000000CC 8D35[07000000]              lea ESI, [inStr] ; prev pos string
+    36 000000D2 8D3D[07000000]              lea EDI, [inStr] ; string to process
+    37 000000D8 B020                        mov AL, " " 
+    38 000000DA BA00000000                  mov EDX, 0 ; max len
+    39                                  cycle:
+    40 000000DF 83F900                      cmp ECX, 0
+    41 000000E2 7E15                        jle generate_result
+    42                                      
+    43 000000E4 F2AE                        repne scasb ; search for ' ' until it is not found
+    44 000000E6 89FB                        mov EBX, EDI
+    45 000000E8 29F3                        sub EBX, ESI ; get word len
+    46 000000EA 4B                          dec EBX
+    47 000000EB 39D3                        cmp EBX, EDX
+    48 000000ED 7F04                        jg new_max_len
+    49                                  com:
+    50 000000EF 89FE                        mov ESI, EDI ; update prev position
+    51 000000F1 EBEC                        jmp cycle
+    52                                  new_max_len:
+    53 000000F3 89DA                        mov EDX, EBX ; save max len
+    54 000000F5 89F5                        mov EBP, ESI ; update max len word start pos
+    55 000000F7 EBF6                        jmp com
+    56                                  
+    57                                  generate_result:
+    58 000000F9 89EE                        mov ESI, EBP ; put source
+    59 000000FB BF[1C000000]                mov EDI, outStr ; put destination
+    60 00000100 89D1                        mov ECX, EDX ; put max length
+    61 00000102 F3A4                        rep movsb ; copy word
+    62 00000104 C6070A                      mov BYTE[EDI], 10 ; put end of string
+    63                                  
+    64                                  output:
+    65 00000107 42                          inc EDX ; len of output + '\n'
+    66 00000108 B804000000                  mov eax, 4 ; системная функция 4 (write)
+    67 0000010D BB01000000                  mov ebx, 1 ; дескриптор файла stdout=1
+    68 00000112 B9[1C000000]                mov ecx, outStr ; адрес выводимой строки
+    69 00000117 CD80                        int 80h ; вызов системной функции
+    70                                    
+    71 00000119 4A                          dec EDX
+    72 0000011A 89D0                        mov EAX, EDX ; max len
+    73 0000011C BE[00000000]                mov ESI, outBuf ; адрес выходной строки
+    74 00000121 E82FFFFFFF                  call IntToStr
+    75 00000126 B804000000                  mov eax, 4 ; системная функция 4 (write)
+    76 0000012B BB01000000                  mov ebx, 1 ; дескриптор файла stdout=1
+    77 00000130 B9[00000000]                mov ecx, outBuf ; адрес выводимой строки
+    78 00000135 BA07000000                  mov edx, lenOut ; длина выводимой строки
+    79 0000013A CD80                        int 80h ; вызов системной функции
+    80                                      
+    81                                  exit:
+    82 0000013C B801000000                  mov eax, 1 ; системная функция 1 (exit)
+    83 00000141 31DB                        xor ebx, ebx ; код возврата 0
+    84 00000143 CD80                        int 80h ; вызов системной функции

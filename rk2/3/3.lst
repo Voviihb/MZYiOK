@@ -1,0 +1,222 @@
+     1                                  %include "lib.asm"
+     2                              <1> StrToInt:
+     3 00000000 57                  <1> push edi
+     4 00000001 B739                <1> mov bh,'9'
+     5 00000003 B330                <1> mov bl,'0'
+     6 00000005 56                  <1> push esi ; сохраняем адрес исходной строки
+     7 00000006 803E2D              <1> cmp byte[esi], '-'
+     8 00000009 7501                <1> jne .prod
+     9 0000000B 46                  <1> inc esi ; пропускаем знак минус
+    10 0000000C FC                  <1> .prod cld
+    11 0000000D 6631FF              <1> xor di,di ; обнуляем будущее число
+    12 00000010 AC                  <1> .cycle: lodsb ; загружаем символ (цифру)
+    13 00000011 3C0A                <1> cmp al,10 ; если 10, то на конец
+    14 00000013 741F                <1> je .Return
+    15 00000015 38D8                <1> cmp al,bl ; сравниваем с кодом нуля
+    16 00000017 722F                <1> jb .Error ; "ниже" – Ошибка
+    17 00000019 38F8                <1> cmp al,bh ; сравниваем с кодом девяти
+    18 0000001B 772B                <1> ja .Error ; "выше" – Ошибка
+    19 0000001D 2C30                <1> sub al,30h ; получаем цифру из символа
+    20 0000001F 6698                <1> cbw ; расширяем до слова
+    21 00000021 6650                <1> push ax ; сохраняем в стеке
+    22 00000023 66B80A00            <1> mov ax,10 ; заносим 10 в AX
+    23 00000027 66F7E7              <1> mul di ; умножаем, результат в DX:AX
+    24 0000002A 665F                <1> pop di ; в DI – очередная цифра
+    25 0000002C 6601F8              <1> add ax,di
+    26 0000002F 6689C7              <1> mov di,ax ; в DI – накопленное число
+    27 00000032 EBDC                <1> jmp .cycle
+    28 00000034 5E                  <1> .Return: pop esi
+    29 00000035 BB00000000          <1> mov ebx,0
+    30 0000003A 803E2D              <1> cmp byte[esi],'-'
+    31 0000003D 7503                <1> jne .J
+    32 0000003F 66F7DF              <1> neg di
+    33 00000042 6689F8              <1> .J mov ax,di
+    34 00000045 98                  <1> cwde
+    35 00000046 EB0B                <1> jmp .R
+    36 00000048 5E                  <1> .Error: pop esi
+    37 00000049 B800000000          <1> mov eax,0
+    38 0000004E BB01000000          <1> mov ebx,1
+    39 00000053 5F                  <1> .R pop EDI
+    40 00000054 C3                  <1> ret
+    41                              <1> 
+    42                              <1> 
+    43                              <1> 
+    44                              <1> IntToStr:
+    45 00000055 57                  <1> push edi
+    46 00000056 53                  <1> push ebx
+    47 00000057 52                  <1> push edx
+    48 00000058 51                  <1> push ecx
+    49 00000059 56                  <1> push esi
+    50 0000005A C60600              <1> mov byte[esi],0 ; на место знака
+    51 0000005D 83F800              <1> cmp eax,0
+    52 00000060 7D05                <1> jge .l1
+    53 00000062 F7D8                <1> neg eax
+    54 00000064 C6062D              <1> mov byte[esi],'-'
+    55 00000067 C646060A            <1> .l1 mov byte[esi+6],10
+    56 0000006B BF05000000          <1> mov edi,5
+    57 00000070 66BB0A00            <1> mov bx,10
+    58 00000074 6699                <1> .again: cwd ; расширили слово до двойного
+    59 00000076 66F7F3              <1> div bx ; делим результат на 10
+    60 00000079 80C230              <1> add dl,30h ; получаем из остатка код цифры
+    61 0000007C 88143E              <1> mov [esi+edi],DL ; пишем символ в строку
+    62 0000007F 4F                  <1> dec edi ; переводим указатель на
+    63                              <1> ; предыдущую позицию
+    64 00000080 6683F800            <1> cmp ax, 0 ; преобразовали все число?
+    65 00000084 75EE                <1> jne .again
+    66 00000086 B806000000          <1> mov eax, 6
+    67 0000008B 29F9                <1> sub ecx, edi ; длина результата+знак
+    68 0000008D 89C8                <1> mov eax,ecx
+    69 0000008F 40                  <1> inc eax ; длина результата+знак+0А
+    70 00000090 46                  <1> inc esi ; пропускаем знак
+    71 00000091 56                  <1> push esi
+    72 00000092 8D343E              <1> lea esi,[esi+edi] ; начало символов результата
+    73 00000095 5F                  <1> pop edi
+    74                              <1> ;rep movsb
+    75 00000096 5E                  <1> pop esi
+    76 00000097 59                  <1> pop ecx
+    77 00000098 5A                  <1> pop edx
+    78 00000099 5B                  <1> pop ebx
+    79 0000009A 5F                  <1> pop edi
+    80 0000009B C3                  <1> ret
+     2                                  
+     3                                  section .data ; сегмент инициализированных переменных
+     4 00000000 010000000200000003-     matrix dd 1, 2, 3, 4, 5
+     4 00000009 000000040000000500-
+     4 00000012 0000               
+     5 00000014 0200000001000000F9-            dd 2, 1, -7, 5, 9
+     5 0000001D FFFFFF050000000900-
+     5 00000026 0000               
+     6 00000028 0700000009000000FC-            dd 7, 9, -4, -2, 1
+     6 00000031 FFFFFFFEFFFFFF0100-
+     6 0000003A 0000               
+     7 0000003C F7FFFFFFFBFFFFFF0B-            dd -9, -5, 11, 5, 44
+     7 00000045 000000050000002C00-
+     7 0000004E 0000               
+     8 00000050 010000000100000002-            dd 1, 1, 2, 3, 4
+     8 00000059 000000030000000400-
+     8 00000062 0000               
+     9                                  
+    10 00000064 05000000                divisor dd 5
+    11                                  
+    12                                  section .bss ; сегмент неинициализированных переменных
+    13 00000000 <res Ah>                inBuf resb 10 ; буфер для вводимой строки
+    14                                  lenIn equ $-inBuf
+    15                                  
+    16 0000000A ??????????????          outBuf resb 7
+    17                                  lenOut equ $-outBuf
+    18                                  
+    19 00000011 <res 14h>               K resd 5
+    20 00000025 <res 14h>               R resd 5
+    21                                  
+    22                                  section .text ; сегмент кода
+    23                                  global _start
+    24                                  _start:
+    25                                  
+    26                                  process1: ; for rows
+    27 0000009C B905000000                  mov ECX, 5 
+    28 000000A1 BE00000000                  mov ESI, 0 ; pos for matrix
+    29 000000A6 BF00000000                  mov EDI, 0 ; pos for K
+    30                                  cycle1:
+    31 000000AB B801000000                  mov EAX, 1 ; product
+    32 000000B0 51                          push ECX
+    33 000000B1 B905000000                  mov ECX, 5
+    34                                  cycle2:
+    35 000000B6 50                          push EAX ; save product
+    36 000000B7 8B04B5[00000000]            mov EAX, [matrix+ESI*4]
+    37 000000BE 99                          cdq ; EAX -> EDX:EAX
+    38 000000BF F73D[64000000]              idiv DWORD[divisor]
+    39 000000C5 58                          pop EAX
+    40 000000C6 83FA00                      cmp EDX, 0
+    41 000000C9 741C                        je action1 ; if EAX % 5 == 0
+    42                                  continue1:
+    43 000000CB 46                          inc ESI ; matrix pos += 1
+    44 000000CC E2E8                        loop cycle2
+    45                                      
+    46 000000CE 83F801                      cmp EAX, 1 ; if no num % 5 == 0 were found
+    47 000000D1 7507                        jne numbers_found1 ; jmp if found
+    48 000000D3 B800000000                  mov EAX, 0 ; else product = 0
+    49 000000D8 EB07                        jmp done1
+    50                                  numbers_found1:
+    51 000000DA 8904BD[11000000]            mov [K+EDI*4], EAX
+    52                                  done1:
+    53 000000E1 47                          inc EDI ; K pos += 1
+    54 000000E2 59                          pop ECX
+    55 000000E3 E2C6                        loop cycle1
+    56 000000E5 EB09                        jmp process2
+    57                                      
+    58                                  action1:
+    59 000000E7 F72CB5[00000000]            imul DWORD[matrix+ESI*4]
+    60 000000EE EBDB                        jmp continue1
+    61                                   
+    62                                  
+    63                                  process2:
+    64 000000F0 B905000000                  mov ECX, 5 ; columns count
+    65 000000F5 BE00000000                  mov ESI, 0 ; current column pos
+    66 000000FA BF00000000                  mov EDI, 0 ; pos for R
+    67                                  cycle3:
+    68 000000FF B801000000                  mov EAX, 1 ; product
+    69 00000104 51                          push ECX
+    70 00000105 B905000000                  mov ECX, 5 ; elements in column count (rows)
+    71 0000010A BB00000000                  mov EBX, 0 ; current element in column
+    72                                  cycle4:
+    73 0000010F 50                          push EAX ; save product
+    74 00000110 8B84B3[00000000]            mov EAX, [matrix+ESI*4+EBX]
+    75 00000117 99                          cdq ; EAX -> EDX:EAX
+    76 00000118 F73D[64000000]              idiv DWORD[divisor]
+    77 0000011E 58                          pop EAX
+    78 0000011F 83FA00                      cmp EDX, 0
+    79 00000122 741F                        je action2 ; if EAX % 5 == 0
+    80                                  continue2:
+    81 00000124 83C314                      add EBX, 20 ; nove to next row element
+    82 00000127 E2E6                        loop cycle4
+    83                                      
+    84 00000129 83F801                      cmp EAX, 1 ; if no num % 5 == 0 were found
+    85 0000012C 7507                        jne numbers_found2 ; jmp if found
+    86 0000012E B800000000                  mov EAX, 0 ; else product = 0
+    87 00000133 EB07                        jmp done2
+    88                                  numbers_found2:
+    89 00000135 8904BD[25000000]            mov [R+EDI*4], EAX
+    90                                  done2:
+    91 0000013C 47                          inc EDI ; R pos += 1
+    92 0000013D 59                          pop ECX
+    93 0000013E 46                          inc ESI ; move to next column
+    94 0000013F E2BE                        loop cycle3
+    95 00000141 EB09                        jmp finalize
+    96                                     
+    97                                  action2:
+    98 00000143 F7ACB3[00000000]            imul DWORD[matrix+ESI*4+EBX]
+    99 0000014A EBD8                        jmp continue2     
+   100                                      
+   101                                  finalize:
+   102 0000014C B905000000                mov ECX, 5 ; total elements
+   103 00000151 BB00000000                mov EBX, 0 ; start pos
+   104                                  output:
+   105 00000156 51                          push ECX
+   106                                      ; очищаем буфер после вывода
+   107 00000157 B907000000                  mov ECX, 7 ; длина буфера вывода
+   108 0000015C B000                        mov Al, 0
+   109 0000015E FC                          cld ; сброс флага направления
+   110 0000015F 8D3D[0A000000]              lea EDI, [outBuf] ; забиваем нулями
+   111 00000165 F3AA                        rep stosb
+   112 00000167 59                          pop ECX
+   113                                  
+   114 00000168 BE[0A000000]                mov ESI, outBuf ; output addr
+   115 0000016D 8B049D[25000000]            mov EAX, [R+EBX*4] ; to be converted to string
+   116 00000174 51                          push ECX ; save data
+   117 00000175 53                          push EBX
+   118 00000176 E8DAFEFFFF                  call IntToStr
+   119 0000017B B804000000                  mov eax, 4 ; системная функция 4 (write)
+   120 00000180 BB01000000                  mov ebx, 1 ; дескриптор файла stdout=1
+   121 00000185 B9[0A000000]                mov ecx, outBuf ; адрес выводимой строки
+   122 0000018A BA07000000                  mov edx, lenOut ; длина выводимой строки
+   123 0000018F CD80                        int 80h ; вызов системной функции
+   124                                      
+   125 00000191 5B                          pop EBX
+   126 00000192 59                          pop ECX
+   127 00000193 43                          inc EBX ; pos = pos + 1
+   128 00000194 E2C0                        loop output
+   129                                    
+   130                                  exit:
+   131 00000196 B801000000                  mov eax, 1 ; системная функция 1 (exit)
+   132 0000019B 31DB                        xor ebx, ebx ; код возврата 0
+   133 0000019D CD80                        int 80h ; вызов системной функции
