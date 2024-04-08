@@ -1,0 +1,84 @@
+     1                                  section .data
+     2                                  section .bss
+     3 00000000 <res 15h>               inStr resb 21
+     4                                  lenInStr equ $-inStr
+     5 00000015 <res 15h>               outStr resb 21
+     6                                  lenOutStr equ $-outStr
+     7                                  
+     8                                  section .text
+     9                                  global _start
+    10                                  _start:
+    11                                  
+    12                                  input:
+    13 00000000 B803000000                  mov EAX, 3
+    14 00000005 BB00000000                  mov EBX, 0
+    15 0000000A B9[00000000]                mov ECX, inStr
+    16 0000000F BA15000000                  mov EDX, lenInStr
+    17 00000014 CD80                        int 80h
+    18                                      
+    19                                  get_real_len:
+    20 00000016 B915000000                  mov ECX, 21
+    21 0000001B 8D3D[00000000]              lea EDI, [inStr]
+    22 00000021 B00A                        mov AL, 10
+    23 00000023 F2AE                        repne scasb ; search for \n
+    24 00000025 83E915                      sub ECX, 21
+    25 00000028 F7D9                        neg ECX ; real len of str
+    26                                      
+    27                                  prepare:
+    28 0000002A 8D2D[00000000]              lea EBP, [inStr] ; for search
+    29 00000030 8D35[00000000]              lea ESI, [inStr] ; for output
+    30 00000036 8D3D[00000000]              lea EDI, [inStr] ; for ' ' split
+    31                                  
+    32                                  process:
+    33 0000003C 83F900                      cmp ECX, 0
+    34 0000003F 7E4C                        jle exit
+    35                                      
+    36 00000041 B020                        mov AL, " "
+    37 00000043 F2AE                        repne scasb ; search for ' '
+    38 00000045 89FB                        mov EBX, EDI
+    39 00000047 29F3                        sub EBX, ESI ; get word len
+    40 00000049 4B                          dec EBX
+    41                                      
+    42 0000004A 51                          push ECX
+    43 0000004B 89D9                        mov ECX, EBX ; counter for word
+    44                                      
+    45                                  cycle_search:
+    46 0000004D 807D0023                    cmp BYTE[EBP], "#"
+    47 00000051 7433                        je next_word
+    48 00000053 807D003F                    cmp BYTE[EBP], "?"
+    49 00000057 742D                        je next_word
+    50 00000059 807D0040                    cmp BYTE[EBP], "@"
+    51 0000005D 7427                        je next_word
+    52                                  
+    53 0000005F 45                          inc EBP ; next symbol
+    54 00000060 E2EB                        loop cycle_search
+    55                                      
+    56                                   
+    57                                  print_word:
+    58 00000062 57                          push EDI
+    59 00000063 52                          push EDX
+    60 00000064 BF[15000000]                mov EDI, outStr
+    61 00000069 89D9                        mov ECX, EBX ; word len
+    62 0000006B F3A4                        rep movsb ; copy word
+    63 0000006D C6070A                      mov BYTE[EDI], 10 ; len + \n
+    64                                      
+    65 00000070 89DA                        mov EDX, EBX ; move len
+    66 00000072 42                          inc EDX ; len + 1
+    67 00000073 B804000000                  mov EAX, 4
+    68 00000078 BB01000000                  mov EBX, 1
+    69 0000007D B9[15000000]                mov ECX, outStr
+    70 00000082 CD80                        int 80h
+    71                                      
+    72 00000084 5A                          pop EDX
+    73 00000085 5F                          pop EDI
+    74                                     
+    75                                  next_word:
+    76 00000086 89FE                        mov ESI, EDI
+    77 00000088 89FD                        mov EBP, EDI
+    78 0000008A 59                          pop ECX ; counter for left part of string
+    79 0000008B EBAF                        jmp process
+    80                                  
+    81                                  exit:
+    82 0000008D B801000000                  mov EAX, 1
+    83 00000092 31DB                        xor EBX, EBX
+    84 00000094 CD80                        int 80h
