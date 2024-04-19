@@ -1,0 +1,80 @@
+     1                                  section .data
+     2                                  section .bss
+     3 00000000 <res 15h>               inStr resb 21
+     4                                  lenInStr equ $-inStr
+     5 00000015 <res 15h>               outStr resb 21
+     6                                  lenOutStr equ $-outStr
+     7 0000002A ????????                counter resd 1 ; to check if word counter % 2 == 0
+     8 0000002E ????????                max_len resd 1 ; to store max len of word
+     9                                  
+    10                                  section .text
+    11                                  global _start
+    12                                  _start:
+    13                                  
+    14                                  input:
+    15 00000000 B803000000                  mov EAX, 3
+    16 00000005 BB00000000                  mov EBX, 0
+    17 0000000A B9[00000000]                mov ECX, inStr
+    18 0000000F BA15000000                  mov EDX, lenInStr
+    19 00000014 CD80                        int 80h
+    20                                      
+    21                                  get_real_len:
+    22 00000016 B915000000                  mov ECX, 21
+    23 0000001B 8D3D[00000000]              lea EDI, [inStr]
+    24 00000021 B02E                        mov AL, "."
+    25 00000023 F2AE                        repne scasb ; search for '.'
+    26 00000025 83E915                      sub ECX, 21
+    27 00000028 F7D9                        neg ECX ; real len of str
+    28                                      
+    29                                  prepare:
+    30 0000002A 8D2D[00000000]              lea EBP, [inStr] ; to store start of word
+    31 00000030 8D35[00000000]              lea ESI, [inStr] ; for output
+    32 00000036 8D3D[00000000]              lea EDI, [inStr] ; for ',' split
+    33 0000003C C705[2A000000]0000-         mov DWORD[counter], 0 ; word counter = 0
+    33 00000044 0000               
+    34 00000046 C705[2E000000]FFFF-         mov DWORD[max_len], -1 ; max_len = -1
+    34 0000004E FFFF               
+    35                                  
+    36                                  process:
+    37 00000050 83F900                      cmp ECX, 0
+    38 00000053 7E31                        jle print_word
+    39                                      
+    40 00000055 B02C                        mov AL, ","
+    41 00000057 F2AE                        repne scasb ; search for ','
+    42 00000059 89FB                        mov EBX, EDI
+    43 0000005B 29EB                        sub EBX, EBP ; get word len
+    44 0000005D 4B                          dec EBX
+    45 0000005E FF05[2A000000]              inc DWORD[counter] ; word counter += 1
+    46                                  
+    47 00000064 F705[2A000000]0100-         test DWORD[counter], 1 ; check if word_counter % 2 == 1
+    47 0000006C 0000               
+    48 0000006E 7512                        jnz next_word ; <- if word_counter % 2 == 0
+    49 00000070 3B1D[2E000000]              cmp EBX, [max_len] ; <- else check if current len > max_len
+    50 00000076 7E0A                        jle next_word ; <- if EBX <= max_len
+    51 00000078 89EE                        mov ESI, EBP ; <- else change position of word with max len
+    52 0000007A 891D[2E000000]              mov [max_len], EBX ; update max len
+    53 00000080 EB00                        jmp next_word
+    54                                      
+    55                                  next_word:
+    56 00000082 89FD                        mov EBP, EDI ; update pointer to next word
+    57 00000084 EBCA                        jmp process   
+    58                                  
+    59                                   
+    60                                  print_word:
+    61 00000086 BF[15000000]                mov EDI, outStr
+    62 0000008B 8B0D[2E000000]              mov ECX, [max_len] ; word len
+    63 00000091 F3A4                        rep movsb ; copy word from ESI
+    64 00000093 C6070A                      mov BYTE[EDI], 10 ; word + \n
+    65                                      
+    66 00000096 8B15[2E000000]              mov EDX, [max_len] ; move len
+    67 0000009C 42                          inc EDX ; len + 1
+    68 0000009D B804000000                  mov EAX, 4
+    69 000000A2 BB01000000                  mov EBX, 1
+    70 000000A7 B9[15000000]                mov ECX, outStr
+    71 000000AC CD80                        int 80h
+    72                                      
+    73                                  
+    74                                  exit:
+    75 000000AE B801000000                  mov EAX, 1
+    76 000000B3 31DB                        xor EBX, EBX
+    77 000000B5 CD80                        int 80h
