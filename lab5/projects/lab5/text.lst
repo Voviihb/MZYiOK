@@ -1,0 +1,100 @@
+     1                                  global _Z11deleteWordsPcPii
+     2                                  extern _Z8printDeli
+     3                                  section .text
+     4                                  _Z11deleteWordsPcPii:
+     5                                      ; пролог
+     6 00000000 55                          push RBP
+     7 00000001 4889E5                      mov RBP, RSP
+     8                                      ; save params
+     9 00000004 52                          push RDX ; word count
+    10 00000005 56                          push RSI ; array of int
+    11                                      ; сохранение содержимого регистров
+    12 00000006 50                          push RAX
+    13 00000007 53                          push RBX
+    14 00000008 51                          push RCX
+    15 00000009 4151                        push R9
+    16 0000000B 4152                        push R10
+    17 0000000D 4153                        push R11
+    18 0000000F 4155                        push R13
+    19 00000011 4156                        push R14
+    20 00000013 4157                        push R15
+    21                                  .get_real_len:
+    22 00000015 57                          push RDI
+    23 00000016 B9FF000000                  mov RCX, 255
+    24 0000001B B02E                        mov AL, '.'
+    25 0000001D F2AE                        repne scasb ; search for '.'
+    26 0000001F 4881E9FF000000              sub RCX, 255
+    27 00000026 48F7D9                      neg RCX ; real len of str
+    28 00000029 4889CF                      mov RDI, RCX ; put len to func params
+    29 0000002C 4889CB                      mov RBX, RCX ; (printDel writes its own data to RCX)
+    30 0000002F E8(00000000)                call _Z8printDeli ; print len
+    31 00000034 4889D9                      mov RCX, RBX ; restore RCX
+    32 00000037 5F                          pop RDI
+    33                                  
+    34                                  .prepare:
+    35 00000038 4C8D17                      lea R10, [RDI] ; current start of word
+    36 0000003B 4C8D1F                      lea R11, [RDI] ; start position
+    37 0000003E 4831D2                      xor RDX, RDX
+    38 00000041 41BE00000000                mov R14, 0 ; offset for array elements
+    39 00000047 4C8B4DF0                    mov R9, [RBP-16] ; address of first element of array
+    40 0000004B 438B1431                    mov EDX, [R9+R14] ; first element of array
+    41 0000004F 41BD00000000                mov R13, 0 ; current word found
+    42 00000055 4C637DF8                    movsxd R15, DWORD[RBP-8] ; words to be deleted left
+    43                                  
+    44                                  .process:
+    45 00000059 4883F900                    cmp RCX, 0
+    46 0000005D 7E3F                        jle .finalize
+    47 0000005F 4983FF00                    cmp R15, 0
+    48 00000063 7E39                        jle .finalize
+    49                                  
+    50 00000065 B020                        mov AL, ' '
+    51 00000067 F2AE                        repne scasb ; search for ' '
+    52 00000069 49FFC5                      inc R13 ; current word += 1
+    53                                  
+    54 0000006C 4889FB                      mov RBX, RDI
+    55 0000006F 4C29D3                      sub RBX, R10
+    56 00000072 48FFCB                      dec RBX ; word len
+    57 00000075 4C39EA                      cmp RDX, R13 ; if array[i] == cur_word
+    58 00000078 751F                        jne .next
+    59                                  
+    60                                  .delete:
+    61 0000007A 51                          push RCX ; save counter
+    62 0000007B 48FFC1                      inc RCX;
+    63 0000007E 4889FE                      mov RSI, RDI ; from
+    64 00000081 57                          push RDI
+    65 00000082 498D3A                      lea RDI, [R10] ; to
+    66 00000085 F3A4                        rep movsb ; copy left part of text
+    67 00000087 5F                          pop RDI
+    68 00000088 59                          pop RCX
+    69 00000089 4983C604                    add R14, 4 ; next element of array
+    70 0000008D 438B1431                    mov EDX, [R9+R14]
+    71 00000091 49FFCF                      dec R15 ; words_to_be_deleted -= 1
+    72 00000094 4C89D7                      mov RDI, R10
+    73 00000097 EBC0                        jmp .process
+    74                                  
+    75                                  .next:
+    76 00000099 4989FA                      mov R10, RDI ; next word
+    77 0000009C EBBB                        jmp .process
+    78                                  
+    79                                  .finalize:
+    80 0000009E 4801CF                      add RDI, RCX
+    81 000000A1 48FFCF                      dec RDI
+    82 000000A4 803F20                      cmp BYTE[RDI], ' '
+    83 000000A7 7503                        jne .epilog
+    84 000000A9 B02E                        mov AL, '.'
+    85 000000AB AA                          stosb ; put . at the end
+    86                                  .epilog:
+    87                                      ; эпилог
+    88 000000AC 415F                        pop R15
+    89 000000AE 415E                        pop R14
+    90 000000B0 415D                        pop R13
+    91 000000B2 415B                        pop R11
+    92 000000B4 415A                        pop R10
+    93 000000B6 4159                        pop R9
+    94 000000B8 59                          pop RCX
+    95 000000B9 5B                          pop RBX
+    96 000000BA 58                          pop RAX
+    97 000000BB 5E                          pop RSI
+    98 000000BC 5A                          pop RDX
+    99 000000BD 5D                          pop RBP
+   100 000000BE C3                          ret
